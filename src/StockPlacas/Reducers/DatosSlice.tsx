@@ -2,16 +2,11 @@ import { createAsyncThunk, createSlice} from "@reduxjs/toolkit";
 // Nota: Debes ajustar las rutas de importación si son diferentes en tu proyecto
 // Importamos IIniState solo para referencia, aunque no la extenderemos para evitar el conflicto
 // import { type IIniState } from "../models/IInistSate"; 
-import { type IDatos } from "../models/IDatos";
+// import { type IDatos } from "../models/IDatos";
+import { type IDatos2 } from "../models/IDatos2";
 import { DatosService } from "../Services/datos.services"; 
 
 // --- 1. Definición de Interfaces Específicas ---
-
-// Interfaz para el payload de GetItemByDate
-interface objetoDatos {
-    DatosPlacas: IDatos[];
-    numerosStockers: string[]
-}
 
 // Tipo de ThunkAPI para GetByIdPrueba, necesario para el rejectValue
 type GetByIdPruebaThunkAPI = {
@@ -37,11 +32,11 @@ class DatosClassSlice {
      * Thunk para obtener un ID, gestionando el error internamente.
      */
     GetByIdPrueba = createAsyncThunk<
-        IDatos, 
-        number, 
+        IDatos2[], 
+        string, 
         GetByIdPruebaThunkAPI 
     >(
-        `Datos/getByIdPrueba`, 
+        `GetDatos/getByIdPrueba`, 
         async (id, info) => {
             try {
                 // Llamada directa al servicio
@@ -60,11 +55,11 @@ class DatosClassSlice {
      * Dado que eliminamos errorNotification, también gestionaremos el error aquí.
      */
     GetItemByDate = createAsyncThunk<
-        objetoDatos[], 
+        IDatos2[], 
         string, 
         { rejectValue: string } 
     >(
-        'Datos/getItemsByDate', 
+        'GetDatos/getItemsByDate', 
         async (date, info) => {
             try {
                 return await this.service.getItemsByDate(date);
@@ -90,10 +85,10 @@ interface DatosInitialState {
     loading: boolean; 
     
     // Tipo para la data individual (usada por GetByIdPrueba)
-    data: IDatos | null; 
+    data: IDatos2 | null; 
 
     // Tipo para la colección de datos (usada por GetItemByDate)
-    dataAll: objetoDatos[] | null;
+    dataAll: IDatos2[] | null;
 }
 
 const initialState: DatosInitialState = {
@@ -116,7 +111,7 @@ export const DatosSlice = createSlice({
         });
         builder.addCase(DatosSliceRequest.GetByIdPrueba.fulfilled, (state, action) => {
             state.loading = false; // Fin de la carga exitoso (false)
-            state.data = action.payload; // Asume que IDatos es el tipo de 'data'
+            state.dataAll = action.payload; // Asume que IDatos es el tipo de 'data'
         });
         builder.addCase(DatosSliceRequest.GetByIdPrueba.rejected, (state) => {
             state.loading = false; // Fin de la carga con error (false)

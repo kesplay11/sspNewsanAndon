@@ -6,14 +6,18 @@ import '@fontsource/roboto/400.css';
 import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
 import './App.css'
+import { Provider } from "react-redux"
+
+import { store } from "./store/store"
 
 import { StockPlacasAutomaticas } from './StockPlacas/StockPlacasAutomatica'
 
 
 function App() {
   return (
+    <Provider store={store}>
         <StockPlacasAutomaticas></StockPlacasAutomaticas>
-   
+   </Provider>
   )
 }
 

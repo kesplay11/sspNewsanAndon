@@ -1,19 +1,15 @@
-import  { type IDatos } from "../models/IDatos"
+// import  { type IDatos } from "../models/IDatos"
+import { type IDatos2 } from "../models/IDatos2";
 import axios from "axios";
-const API_BASE_URL =  "https://spp.newsan.com.ar";
-
-interface objetoDatos {
-    DatosPlacas: IDatos[];
-    numerosStockers: string[]
-}
+const API_BASE_URL =  "http://arushap41:81/api/SMTDataBase";
 
 export class DatosService {
     Url = "Datos";
 
-    public getByIdPrueba = (id: number): Promise<IDatos> => {
-        return new Promise((resolve, reject) => {
+    public getByIdPrueba = (nro_op: string): Promise<IDatos2[]> => {
+        return new Promise<IDatos2[]>((resolve, reject) => {
             axios
-                .get<IDatos>(`${API_BASE_URL}/${this.Url}/GetByIdPrueba/${id}`)
+                .get<IDatos2[]>(`${API_BASE_URL}/GetDatosOP/${nro_op}`)
                 .then(function (response) {
                     resolve(response.data)
                 })
@@ -23,10 +19,10 @@ export class DatosService {
         })
     }
 
-    public getItemsByDate = (date: string): Promise<objetoDatos[]> => {
-        return new Promise((resolve, reject) => {
+    public getItemsByDate = (date: string): Promise<IDatos2[]> => {
+        return new Promise<IDatos2[]>((resolve, reject) => {
             axios
-                .get<objetoDatos[]>(`${API_BASE_URL}/${this.Url}/GetItemsByDate/${date}`)
+                .get<IDatos2[]>(`${API_BASE_URL}/GetDatosOP/${date}`)
                 .then(function (response) {
                     resolve(response.data)
                 })
