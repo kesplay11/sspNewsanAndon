@@ -1,4 +1,4 @@
-import { createAsyncThunk, createSlice} from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice, type PayloadAction} from "@reduxjs/toolkit";
 // Nota: Debes ajustar las rutas de importación si son diferentes en tu proyecto
 // Importamos IIniState solo para referencia, aunque no la extenderemos para evitar el conflicto
 // import { type IIniState } from "../models/IInistSate"; 
@@ -88,13 +88,17 @@ interface DatosInitialState {
     data: IDatos2 | null; 
 
     // Tipo para la colección de datos (usada por GetItemByDate)
-    dataAll: IDatos2[] | null;
+    dataAll: IDatos2[];
+
+    // Tipo de coleccion personalizada 
+    dataTable: IDatos2[];
 }
 
 const initialState: DatosInitialState = {
     loading: false, // Inicialmente es false
     data: null,    // Para GetByIdPrueba
-    dataAll: null  // Para GetItemByDate
+    dataAll: [],  // Para GetItemByDate
+    dataTable: [] // Inicializar el array en vacio
 }
 
 /**
@@ -103,7 +107,11 @@ const initialState: DatosInitialState = {
 export const DatosSlice = createSlice({
     name: "Datos",
     initialState: initialState,
-    reducers: {}, // Reducers síncronos
+    reducers: {
+        setDataTable: (state, action: PayloadAction<IDatos2[]>) => {
+            state.dataTable = action.payload
+        }
+    }, // Reducers síncronos
     extraReducers: (builder) => {
         // --- GetByIdPrueba ---
         builder.addCase(DatosSliceRequest.GetByIdPrueba.pending, (state) => {

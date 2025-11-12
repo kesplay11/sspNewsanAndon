@@ -3,7 +3,7 @@ import { tableCellClasses } from "@mui/material/TableCell";
 import { styled } from "@mui/material/styles";
 //esto antes se hacia con DatosSliceRequest, por l que hay que cambiar en todos los lados
 //donde se usaba antes
-import { DatosSliceRequest } from "./Reducers/DatosSlice";
+import { DatosSlice, DatosSliceRequest } from "./Reducers/DatosSlice";
 import { useAppDispatch, useAppSelector } from "../store/store";
 // import { useAppDispatch } from "app/Middleware/store/store";
 
@@ -21,10 +21,7 @@ import { Controller, useForm } from "react-hook-form";
 import { useEffect, useState } from "react";
 import { unwrapResult } from "@reduxjs/toolkit";
 
-// interface Stockers {
-//     datosPlacas: IDatos2[];
-//     numeroStockers: string;
-// }
+const REFRESH_INTERVAL = 10000;
 
 const StyledTableCell = styled(TableCell)(({ theme }) => ({
     [`&.${tableCellClasses.body}`]: {
@@ -76,40 +73,41 @@ const StyledTableHead = styled(TableCell)(({ theme }) => ({
 
 
 export const StockPlacasAutomaticas = () => {
-    let datos:IDatos2[] = [];
+    const [datos, setDatos] = useState<IDatos2[]>([])
 
+    const dispatch = useAppDispatch()
 
 
     const service = new DatosService;
-async function obtenerTodosLosDatosOP(OPES: string[]): Promise<IDatos2[]> {
-    
-    // 2.1. Mapea el array OPES a un array de Promesas: Promise<IDatos2[]>[]
-    const promesasDePeticiones = OPES.map(op => service.getByIdPrueba(op));
+    async function obtenerTodosLosDatosOP(OPES: string[]): Promise<IDatos2[]> {
 
-    try {
-        // 2.2. Espera a todas las Promesas. 'respuestas' es de tipo IDatos2[][]
-        const respuestas: IDatos2[][] = await Promise.all(promesasDePeticiones);
+        // 2.1. Mapea el array OPES a un array de Promesas: Promise<IDatos2[]>[]
+        const promesasDePeticiones = OPES.map(op => service.getByIdPrueba(op));
 
-        console.log("✅ Todas las peticiones completadas.");
-        
-        // 2.3. ¡CORRECCIÓN CLAVE! Usar .flat() para convertir IDatos2[][] a IDatos2[]
-        const datosCompletos: IDatos2[] = respuestas.flat();
+        try {
+            // 2.2. Espera a todas las Promesas. 'respuestas' es de tipo IDatos2[][]
+            const respuestas: IDatos2[][] = await Promise.all(promesasDePeticiones);
 
-        // El tipo de retorno ahora coincide con IDatos2[]
-        return datosCompletos;
-    } catch (error) {
-        console.error("❌ Una o más peticiones fallaron:", error);
-        // Puedes relanzar el error o retornar un valor predeterminado
-        throw error;
+            console.log("✅ Todas las peticiones completadas.");
+
+            // 2.3. ¡CORRECCIÓN CLAVE! Usar .flat() para convertir IDatos2[][] a IDatos2[]
+            const datosCompletos: IDatos2[] = respuestas.flat();
+
+            // El tipo de retorno ahora coincide con IDatos2[]
+            return datosCompletos;
+        } catch (error) {
+            console.error("❌ Una o más peticiones fallaron:", error);
+            // Puedes relanzar el error o retornar un valor predeterminado
+            throw error;
+        }
     }
-}
 
-        const OPES = [
+    const OPES = [
         "OP-303454",
         "OP-303453",
-        "OP-303254",
-        "OP-303142",
-        "OP-301454"
+        "OP-303455",
+        "OP-303452",
+        "OP-303451"
     ]
     const { control, watch } = useForm()
     // const dispatch = useAppDispatch()
@@ -117,21 +115,48 @@ async function obtenerTodosLosDatosOP(OPES: string[]): Promise<IDatos2[]> {
 
     useEffect(() => {
         obtenerTodosLosDatosOP(OPES)
-        .then(resultadosFinales => {
-        datos = resultadosFinales;
-        console.log("📦 El array final con los 5 resultados (un array por cada OP) es:");
-        // Aquí tendrás un array con 5 elementos.
-        // Cada elemento es el array IDatos2[] devuelto por la API.
-        console.log(resultadosFinales); 
-        console.log(`Total de resultados individuales: ${resultadosFinales.length}`);
-    })
-    .catch(error => {
-        console.error("Hubo un error en el flujo general:", error);
-    });
+            .then(resultadosFinales => {
+                console.log(resultadosFinales);
+                setDatos(resultadosFinales);
+                console.log("📦 El array final con los 5 resultados (un array por cada OP) es:");
+                // Aquí tendrás un array con 5 elementos.
+                // Cada elemento es el array IDatos2[] devuelto por la API.
+                console.log(resultadosFinales);
+                dispatch(DatosSlice.actions.setDataTable(resultadosFinales))
+                console.log(`Total de resultados individuales: ${resultadosFinales.length}`);
+            })
+            .catch(error => {
+                console.error("Hubo un error en el flujo general:", error);
+            });
 
 
-    },[])
-    
+        const intervalId = setInterval(() => {
+            console.log(`Polling: Despachando acción cada ${REFRESH_INTERVAL / 1000} segundos.`);
+            // Llamamos a getAll en cada intervalo
+            obtenerTodosLosDatosOP(OPES)
+                .then(resultadosFinales => {
+                    console.log(resultadosFinales);
+                    setDatos(resultadosFinales);
+                    console.log("📦 El array final con los 5 resultados (un array por cada OP) es:");
+                    // Aquí tendrás un array con 5 elementos.
+                    // Cada elemento es el array IDatos2[] devuelto por la API.
+                    console.log(resultadosFinales);
+                    dispatch
+                    console.log(`Total de resultados individuales: ${resultadosFinales.length}`);
+                })
+                .catch(error => {
+                    console.error("Hubo un error en el flujo general:", error);
+                });
+        }, REFRESH_INTERVAL);
+
+        // Función de limpieza: se ejecuta al desmontar el componente o antes de re-ejecutar el useEffect
+        return () => {
+            console.log("Limpiando intervalo de polling.");
+            clearInterval(intervalId);
+        };
+
+    }, [])
+    //dentro del array de dependencias debe ir setDatos, para que se ejecute el intervalo de 10 segundos
 
 
 
@@ -157,73 +182,77 @@ async function obtenerTodosLosDatosOP(OPES: string[]): Promise<IDatos2[]> {
     const buscarPallet = () => {
         console.log("hola mundo")
     }
+    console.log()
 
     return (
         <>
             {datos && (
-    <main className={`h-full w-screen bg-blue-950`}> {/* Simplificación de la clase h-full */}
-        <HeaderTablero />
-        <section className="px-6">
-            <div className="mt-4 w-full">
-                <Controller
-                    name="stockerNumber"
-                    control={control}
-                    defaultValue=""
-                    render={({ field }) => (
-                        <TextField {...field} className="bg-background placeholder:text-3xl" fullWidth id="stocker-number" label="Ingrese un numero de stocker" variant="outlined"/>
-                    )}
-                />
-            </div>
-            <div className="w-full flex justify-between text-white text-3xl font-medium mt-16 mb-6 items-end">
-                <p className="text-5xl">ANDÓN STOCK PLACAS</p>
-                <p className="text-4xl">{fecha}</p>
-            </div>
-            {datos && (
-                <section>
-                    <TableContainer component={Paper} sx={{ boxShadow: "none", backgroundColor: "#172554", paddingBottom: "1rem" }}>
-                        <Table sx={{ minWidth: 650, backgroundColor: "#172554" }} aria-label="simple table">
-                            <TableHead className="bg-linearGradientHeaderTable">
-                                <TableRow sx={{ '&:last-child td, &:last-child th': { fontSize: "2.5rem" } }}>
-                                    {/* CABECERA (HEAD) - Los 'div' de separación fueron eliminados y la separación debe aplicarse con CSS/clases a los StyledTableHead si es necesario */}
-                                    <StyledTableHead align="center">MODELO</StyledTableHead>
-                                    <StyledTableHead align="center">LOTE</StyledTableHead>
-                                    <StyledTableHead align="center">SEMIELABORADO</StyledTableHead>
-                                    <StyledTableHead align="center">OP</StyledTableHead>
-                                    <StyledTableHead align="center">TIPO</StyledTableHead>
-                                    <StyledTableHead align="center">CANTIDAD</StyledTableHead>
-                                </TableRow>
-                            </TableHead>
-                            
-                            {/* ¡ELIMINADO! El div className="mt-3" no puede ser hijo directo de <Table> */}
-                            {/* Si necesitas espacio, aplícalo al <TableContainer> o <section> */}
-                            
-                            <TableBody>
-                                {datos.map((elementos) => (
-                                    <div key={elementos.id}>
-                                        {/* ¡ELIMINADO! El div className="my-6" no puede ser hijo directo de <TableBody> o hermano de <TableRow> */}
-                                        {/* Si necesitas espacio vertical entre filas, aplícalo a los márgenes/paddings de <TableRow> */}
-                                        
-                                        <TableRow
-                                            sx={{ backgroundColor: '#243150', borderBottom: '12px solid #172554' }} /* Se agregó un borde para simular la separación vertical */
-                                        >
-                                            {/* CUERPO (BODY) - Los 'div' de separación entre StyledTableCell fueron eliminados */}
-                                            <StyledTableCell align="center">{elementos.created_at}</StyledTableCell>
-                                            <StyledTableCell align="center">{elementos.declarados}</StyledTableCell>
-                                            <StyledTableCell align="center">{elementos.semielaborado}</StyledTableCell>
-                                            <StyledTableCell align="center">{elementos.op}</StyledTableCell>
-                                            <StyledTableCellBlue align="center">{elementos.prod_aoi}</StyledTableCellBlue>
-                                            <StyledTableCellYellow align="center">{elementos.panel}</StyledTableCellYellow>
-                                        </TableRow>
-                                    </div>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-                </section>
+                <main className={`w-full bg-blue-950`}> {/* Simplificación de la clase h-full */}
+                    <HeaderTablero />
+                    <section className="px-6">
+                        <div className="mt-4 w-full">
+                            <Controller
+                                name="stockerNumber"
+                                control={control}
+                                defaultValue=""
+                                render={({ field }) => (
+                                    <TextField {...field} className="bg-background placeholder:text-3xl" fullWidth id="stocker-number" label="Ingrese un numero de stocker" variant="outlined" />
+                                )}
+                            />
+                        </div>
+                        <div className="w-full flex justify-between text-white text-3xl font-medium mt-16 mb-6 items-end">
+                            <p className="text-5xl">ANDÓN STOCK PLACAS</p>
+                            <p className="text-4xl">{fecha}</p>
+                        </div>
+                        {datos && (
+                            <section>
+                                <TableContainer component={Paper} sx={{ boxShadow: "none", backgroundColor: "#172554", paddingBottom: "1rem" }}>
+                                    <Table sx={{ minWidth: 650, backgroundColor: "#172554" }} aria-label="simple table">
+
+                                        {/* 1. Encabezado de la Tabla (TableHead) */}
+                                        <TableHead className="bg-linearGradientHeaderTable">
+                                            <TableRow sx={{ '&:last-child td, &:last-child th': { fontSize: "2.5rem" } }}>
+                                                {/* El número de celdas DEBE coincidir con las celdas del cuerpo */}
+                                                <StyledTableHead align="center">MODELO</StyledTableHead>
+                                                <StyledTableHead align="center">LOTE</StyledTableHead>
+                                                <StyledTableHead align="center">SEMIELABORADO</StyledTableHead>
+                                                <StyledTableHead align="center">OP</StyledTableHead>
+                                                <StyledTableHead align="center">TIPO</StyledTableHead>
+                                                <StyledTableHead align="center">CANTIDAD</StyledTableHead>
+                                            </TableRow>
+                                        </TableHead>
+
+                                        {/* 2. Cuerpo de la Tabla (TableBody) */}
+                                        <TableBody>
+                                            {datos.map((elementos) => (
+
+                                                <TableRow
+                                                    key={elementos.id} // Se mantiene la clave única
+                                                    sx={{ backgroundColor: '#243150', borderBottom: '12px solid #172554' }} /* Simula la separación vertical */
+                                                >
+
+                                                    <StyledTableCell align="center">{elementos.model}</StyledTableCell>
+
+                                                    <StyledTableCell align="center">{elementos.lot_Number}</StyledTableCell>
+
+                                                    <StyledTableCell align="center">{elementos.semielaborado}</StyledTableCell>
+
+                                                    <StyledTableCell align="center">{elementos.op}</StyledTableCell>
+
+                                                    <StyledTableCellBlue align="center">{elementos.prod_aoi}</StyledTableCellBlue>
+
+                                                    <StyledTableCellYellow align="center">{elementos.panel}</StyledTableCellYellow>
+
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </TableContainer>
+                            </section>
+                        )}
+                    </section>
+                </main>
             )}
-        </section>
-    </main>
-)}
         </>
     )
 }
